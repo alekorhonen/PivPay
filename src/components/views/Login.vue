@@ -14,7 +14,7 @@
                         <div class="message" v-if="!success" :class="{ 'message': message, 'failure': !success }">{{ message }}</div>
                     </div>
                     <div class="form-group">
-                        <input type="text" class="form-control" placeholder="Username" v-model="username">
+                        <input type="text" class="form-control" placeholder="E-mail Address" v-model="email">
                     </div>
                     <div class="form-group password-input">
                         <input type="password" class="form-control" placeholder="Password" v-model="password">
@@ -35,11 +35,8 @@
 </template>
 
 <script>
-import NodeRSA from 'node-rsa'
-import aes256 from 'aes256'
-import QuickEncrypt from 'quick-encrypt'
-import randomWords from 'random-words'
 import Preloader from '../Preloader'
+import firebase from 'firebase'
 
 export default {
     name: 'Login',
@@ -48,8 +45,8 @@ export default {
     },
     data() {
         return {
-            username: '',
-            password: '',
+            email: null,
+            password: null,
             request: false,
             success: false,
             message: null
@@ -58,32 +55,17 @@ export default {
     methods: {
         login() {
             this.request = true;
-            const params = {
-                'username': this.username,
-                'password': this.password
+
+            if(this.email && this.password) {
+                firebase.auth().signInWithEmailAndPassword(this.email, this.password).then(cred => {
+                    this.request = false
+                    this.$store.state.loggedIn = true
+                    this.$router.push({ path: '/' })
+                }).catch(err => {
+                    this.message = err.message
+                    this.request = false
+                })
             }
-
-            this.axios.post('http://localhost/pivpay/index.php?action=login', params, {
-                headers: {
-                    'Content-type': 'application/x-www-form-urlencoded'
-                },
-            })
-            .then((response) => {
-                this.success = response.data.success
-                this.message = response.data.message
-                if(response.data.success) {
-                    this.$refs.PreloaderText.innerHTML = "Login successful!"
-                    setTimeout(() => {
-                        sessionStorage.setItem("sessionToken", response.data.token)
-                        this.$store.state.SessionToken = response.data.token
-                        this.$store.state.Username = this.username
-                        this.$router.push({ name: 'Overview' })
-                    }, 1500)
-                }
-            })
-            .catch((err) => {
-
-            });
         }
     },
     computed: {

@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <Sidebar v-if="!request && sessionToken" />
+    <Sidebar v-if="!request && user" />
     <transition
       name="fade"
       mode="out-in">
@@ -15,6 +15,8 @@
 <script>
 import Sidebar from '@/components/Sidebar'
 import Preloader from '@/components/Preloader'
+import firebase from 'firebase'
+
 export default {
   name: 'App',
   components: {
@@ -23,37 +25,21 @@ export default {
   },
   data() {
     return {
-      request: false
+      request: true,
+      user: null
     }
-  },
-  computed: {
-    sessionToken() {
-      return this.$store.state.SessionToken;
-    }
-  },
+  }, 
   mounted() {
-    if(sessionStorage.getItem('sessionToken')) {
-      this.request = true
-      const token = sessionStorage.getItem('sessionToken');
-      //Check if the saved session is alive
-      let that = this
-      this.axios.get('http://localhost/pivpay/index.php?action=checktoken&token=' + token)
-      .then(function (response) {
-        if(response.data.alive) {
-          console.log(response.data)
-          that.$store.state.SessionToken = sessionStorage.getItem('sessionToken');
-          that.$store.state.Username = response.data.username
-        } else {
-          that.$store.state.sessionToken = ''
-          that.$store.state.Username = ''
-        }
-        that.request = false
-      })
-      .catch(function (error) {
-        that.$store.state.sessionToken = ''
-        that.$store.state.Username = ''
-      })
-    }
+    const self = this
+    firebase.auth().onAuthStateChanged(function(user) {
+      if (user) {
+        self.user = user
+      } else {
+        self.user = null
+      }
+
+      self.request = false
+    })
   }
 }
 </script>
@@ -70,6 +56,16 @@ body {
   font-family: 'Open Sans', sans-serif;
   -webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
+}
+
+.noselect {
+  -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+     -khtml-user-select: none; /* Konqueror HTML */
+       -moz-user-select: none; /* Firefox */
+        -ms-user-select: none; /* Internet Explorer/Edge */
+            user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome and Opera */
 }
 
 *, :after, :before {
@@ -133,6 +129,14 @@ a:hover {
   text-align: center;
 }
 
+.text-left {
+  text-align: left;
+}
+
+.text-right {
+  text-align: right;
+}
+
 .smalltext {
   font-size: 13px;
 }
@@ -149,7 +153,6 @@ a:hover {
   overflow: hidden;
 }
 
-#app .sidebar,
 #app .content {
   /* display: inline-block; */
   overflow-x: auto;

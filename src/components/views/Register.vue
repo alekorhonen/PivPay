@@ -15,7 +15,7 @@
                             <div class="message" v-if="!success" :class="{ 'message': message, 'failure': !success }">{{ message }}</div>
                         </div>
                         <div class="form-group">
-                            <input type="text" class="form-control" placeholder="Username" v-model="username">
+                            <input type="username" class="form-control" placeholder="Display Name" v-model="username">
                         </div>
                         <div class="form-group">
                             <input type="email" class="form-control" placeholder="Email" v-model="email">
@@ -26,8 +26,11 @@
                         <div class="form-group password-input">
                             <input type="password" class="form-control" placeholder="Repeat password" v-model="repeatPassword">
                         </div>
+                        <div class="form-group text-left">
+                            <label><input type="checkbox" v-model="termsOfService" @change="agreedToTerms"> <span class="smalltext"> I agree to the Terms of Service and Privacy Policy.</span></label>
+                        </div>
                         <div class="form-group">
-                            <button class="primary-button btn-block" @click="showSeeds = !showSeeds">Continue registration</button>
+                            <button type="submit" class="primary-button btn-block">Register my account</button>
                         </div>
                         <router-link to="/login" class="smalltext">Already have an account? Sign in</router-link>
                     </div>
@@ -42,10 +45,7 @@
                             <textarea class="form-control" v-model="seeds" placeholder="Wallet seed" readonly></textarea>
                         </div>
                         <div class="form-group">
-                            <label><input type="checkbox" v-model="termsOfService" @change="agreedToTerms"> <span class="smalltext"> I agree to the Terms of Service and Privacy Policy.</span></label>
-                        </div>
-                        <div class="form-group">
-                            <button type="submit" ref="submitRegistration" class="primary-button btn-block" disabled>Register my account</button>
+                            <label><input type="checkbox" v-model="termsOfService" @change="agreedToTerms"> <span class="smalltext"> I have copied these seeds to a safe place.</span></label>
                         </div>
                         <center><a href="#" @click="showSeeds = !showSeeds">Go back</a></center>
                     </div>
@@ -61,15 +61,17 @@ import aes256 from 'aes256'
 import QuickEncrypt from 'quick-encrypt'
 import randomWords from 'random-words'
 import Preloader from '@/components/Preloader'
+import db from '@/firebase/init'
+import firebase from 'firebase'
 
 export default {
     name: 'Register',
     data() {
         return {
-            username: '',
-            email: '',
-            password: '',
-            repeatPassword: '',
+            username: null,
+            email: null,
+            password: null,
+            repeatPassword: null,
             request: true,
             success: false,
             message: null,
@@ -93,7 +95,6 @@ export default {
                     this.request = false
                     this.seeds = randomWords({ exactly: 12, formatter: (word)=> word.toUpperCase(), join: ' '})
                     this.$store.state.backupKey = btoa(aes256.encrypt(this.seeds, btoa(this.privateKey)))
-                    console.log(this.seeds)
                 })
             }, 1500)
         } else {
@@ -151,37 +152,38 @@ export default {
             return str;
         },
         register() {
-            if(this.password === this.repeatPassword) {
-                this.request = true;
-                const params = {
-                    'username': this.username,
-                    'email': this.email,
-                    'password': this.password,
-                    'repeat_password': this.repeatPassword,
-                    'public_key': this.publicKey,
-                    'backup_key': this.backup_key
-                }
-
-                this.axios.post('http://localhost/pivpay/index.php?action=register', params, {
-                    headers: {
-                        'Content-type': 'application/x-www-form-urlencoded'
-                    },
-                })
-                .then((response) => {
-                    if(response.data.success) {
-                        this.finalizeRegistration()
-                    } else {
-                        this.request = false
-                        this.success = response.data.success
-                        this.message = response.data.message
-                    }
-                })
-                .catch((err) => {
-                    this.request = false
-                });
-            } else {
-                this.message = "Password's do not match.";
+            if(!this.username || !this.email) {
+                this.message = "Please fill all fields"
+                return
             }
+
+            if(this.password != this.repeatPassword) {
+                this.message = "Password's do not match."
+                return
+            }
+
+            this.request = true; //Show our preloader
+            const self = this
+            firebase.auth().createUserWithEmailAndPassword(this.email, this.password).then(cred => {
+                const user = firebase.auth().currentUser
+
+                //Update the username/display name seperately to the user's account.
+                user.updateProfile({
+                    displayName: this.username
+                }).then(function() {
+                    self.showSeeds = true
+                    self.request = false
+                }).catch(function(error) {
+                    console.log(error)
+                    self.showSeeds = true
+                    self.request = false
+                });
+                    
+            }).catch(err => {
+                console.log(err)
+                this.message = err.message
+                this.request = false
+            })
         },
         finalizeRegistration: () => {
             this.$refs.register_loader_text.innerHTML = "Generating your encryption keys...";

@@ -7,6 +7,7 @@ import Support from '@/components/views/Support'
 import Settings from '@/components/views/Settings'
 import Register from '@/components/views/Register'
 import Login from '@/components/views/Login'
+import firebase from 'firebase'
 
 //View components
 import Coupon from '@/components/views/view-components/Coupon'
@@ -77,17 +78,17 @@ export const router = new Router({
 })
 
 router.beforeEach((to, from, next) => {
+  const user = firebase.auth().currentUser
   if(to.matched.some(rec => rec.meta.requiresAuth)) {
-    if(sessionStorage.getItem('sessionToken')) {
+    if(user) {
       next()
     } else {
       next({ name: 'Login' })
     }
   } else {
-    if(!sessionStorage.getItem('sessionToken')) {
-      next()
-    } else {
-      next({ name: 'Overview' })
+    if(!user) {
+
     }
+    next()
   }
 })
