@@ -1,6 +1,6 @@
-# pivpayfront
+# PivPay Dashboard
 
-> Pivpay dashboard front-end.
+> Dashboard for the PivPay platform.
 
 ## Build Setup
 
