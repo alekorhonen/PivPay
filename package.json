@@ -17,7 +17,7 @@
     "axios": "^0.18.0",
     "chart.js": "^2.7.3",
     "firebase": "^5.9.1",
-    "keypair": "^1.0.1",
+    "keypair": "^1.0.4",
     "node-rsa": "^1.0.5",
     "quick-encrypt": "^1.0.8",
     "random-words": "^1.1.0",
